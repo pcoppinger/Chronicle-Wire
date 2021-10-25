@@ -8,6 +8,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
@@ -183,6 +184,63 @@ public class JSONWireMisc {
         assertBalancedBrackets(actual);
     }
 
+    @Test
+    public void durationHolder() {
+        final DurationHolder holder = new DurationHolder();
+        holder.foo = 1;
+        holder.duration = Duration.ofSeconds(63);
 
+        wire.getValueOut().object(holder);
+        final String actual = wire.toString();
+        System.out.println("actual = " + actual);
+        assertBalancedBrackets(actual);
+
+        final String h = Marshallable.$toString(holder);
+        final DurationHolder deserialized = Marshallable.fromString(h);
+
+        System.out.println(deserialized);
+
+    }
+
+    static final class DurationHolder extends SelfDescribingMarshallable {
+        int foo;
+        Duration duration;
+    }
+
+    @Test
+    public void durationHolderMarshallable() {
+        final DurationHolder holder = new DurationHolder();
+        holder.foo = 1;
+        holder.duration = Duration.ofSeconds(63);
+
+        final String h = Marshallable.$toString(holder);
+        System.out.println("h = " + h);
+        // This used to cause writing outside memory confinements
+        final DurationHolder deserialized = Marshallable.fromString(h);
+        System.out.println("deserialized = " + deserialized);
+    }
+
+    static final class EnumHolder extends SelfDescribingMarshallable {
+        int foo;
+        private EnumSet<DayOfWeek> activeDays;
+    }
+
+    @Test
+    public void enums() {
+        final EnumHolder holder = new EnumHolder();
+        holder.foo = 1;
+        holder.activeDays = EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY);
+
+        wire.getValueOut().object(holder);
+        final String actual = wire.toString();
+        System.out.println("actual = " + actual);
+        assertBalancedBrackets(actual);
+
+        JSONWire deserializer = new JSONWire(wire.bytes()).useTypes(useTypes);
+        EnumHolder eh = deserializer.getValueIn().object(EnumHolder.class);
+
+        System.out.println("eh = " + eh);
+
+    }
 
 }
