@@ -30,7 +30,7 @@ public class EventByMethodExamples {
     private static void noArgs() {
         dump(Examples.class,
                 "No Arguments",
-                "Any event type, single method call only, with no arguments",
+                "Any event type, single method calls only, with no arguments",
                 "eg.noArgs()",
                 Examples::noArgs);
     }

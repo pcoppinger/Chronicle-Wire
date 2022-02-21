@@ -6,7 +6,7 @@ This has a number of advantages
 
 - the simplest way to pass data between components is a method call. i.e. no actual transport
 - asynchronous method calls can be easily modelled into data structures.
-- events as method calls leads to a natural association an action with an event type.
+- events as method calls lead to a natural association of an action with an event type.
 
 == Event processing
 
@@ -19,11 +19,11 @@ Each event type has a different method to be called which implements code for th
 
 TBD: Add a diagram here
 
-However, messages can still be produced and process generically through the use of a generic event where the event type is passed programmatically.
+However, messages can still be produced and processed generically through the use of a generic event where the event type is passed programmatically.
 
 === Gateways using an input/outputs architecture
 
-A gateway handles information on behalf of a remote clients.
+A gateway handles information on behalf of remote clients.
 It is two main inputs, data from the client, plus data from systems it talks to.
 In turn, it can produce two streams of output, one replies to the client and the other passes on data to internal systems.
 
@@ -35,7 +35,7 @@ In both cases, these components can be tested using events stored in YAML files 
 
 === Processing events
 
-Events can be passed on by either processing the raw message or invoking the same method down stream.
+Events can be passed on by either processing the raw message or invoking the same method downstream.
 
 == Modelling simple asynchronous method calls
 
@@ -96,7 +96,7 @@ interface DestinationTimedSaying extends Destination<TimedSaying> { }
 
 === Filtering messages with chained calls
 
-A `MethodReader` recognises implementations which extends the marker interface `@IgnoresEverything` as one which doesn't need to the called.
+A `MethodReader` recognises implementations that extends the marker interface `@IgnoresEverything` as one which doesn't need to the called.
 As such, if any stage in the chained call returns an implementation of this interface, the rest of the message is discarded and not read.
 For convenience, there is a Mocker for generating such an implementation.
 
@@ -116,7 +116,7 @@ class MyTimedSaying implements TimedSaying {
 
 === No Arguments
 
-Any event type, single method call only, with no arguments
+Any event type, single method calls only, with no arguments
 
 [source,java]
 ----

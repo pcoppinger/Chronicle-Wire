@@ -1085,7 +1085,7 @@ public class BinaryWire extends AbstractWire implements Wire {
     @Override
     public ValueOut writeEventName(@NotNull CharSequence name) {
         if (bytes.retainsComments())
-            bytes.comment(name);
+            bytes.comment(name + ":");
         writeCode(EVENT_NAME).write8bit(name);
         return valueOut;
     }
@@ -1171,7 +1171,7 @@ public class BinaryWire extends AbstractWire implements Wire {
 
     private void writeField(@NotNull CharSequence name) {
         if (bytes.retainsComments())
-            bytes.comment(name);
+            bytes.comment(name + ":");
         int len = name.length();
         if (len < 0x20) {
             writeField0(name, len);
@@ -1195,7 +1195,7 @@ public class BinaryWire extends AbstractWire implements Wire {
 
     private void writeField(int code) {
         if (bytes.retainsComments())
-            bytes.comment("#" + code);
+            bytes.comment(Integer.toString(code));
         writeCode(FIELD_NUMBER);
         bytes.writeStopBit(code);
     }
