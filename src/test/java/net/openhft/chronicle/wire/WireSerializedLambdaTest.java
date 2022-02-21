@@ -101,20 +101,8 @@ public class WireSerializedLambdaTest extends WireTestCommon {
                 .write(() -> "two").object(Fun.ADD_A)
                 .write(() -> "three").object(Update.DECR);
 
-        assertEquals("[pos: 0, rlim: 349, wlim: 2147483632, cap: 2147483632 ] ǁ" +
-                "Ãone¶⒗SerializedLambda\\u0082 ⒈٠٠" +
-                "Âcc¼3net.openhft.chronicle.wire.WireSerializedLambdaTest" +
-                "Ãfic¸4net/openhft/chronicle/core/util/SerializableFunction" +
-                "Äfimnåapply" +
-                "Äfims¸&(Ljava/lang/Object;)Ljava/lang/Object;" +
-                "Ãimk⒌" +
-                "Âicðjava/lang/String" +
-                "ÃimnëtoUpperCase" +
-                "Ãimsô()Ljava/lang/String;" +
-                "Ãimt¸&(Ljava/lang/String;)Ljava/lang/String;" +
-                "Âca\\u0082٠٠٠٠" +
-                "Ãtwo¶⒊FunåADD_A" +
-                "Åthree¶⒍UpdateäDECR‡", wire.bytes().toDebugString(349));
+        assertEquals("[pos: 0, rlim: 350, wlim: 2147483632, cap: 2147483632 ] ǁÃone¶⒗SerializedLambda\\u0082!⒈٠٠Âcc¼3net.openhft.chronicle.wire.WireSerializedLambdaTestÃfic¸4net/openhft/chronicle/core/util/SerializableFunctionÄfimnåapplyÄfims¸&(Ljava/lang/Object;)Ljava/lang/Object;Ãimk¡⒌Âicðjava/lang/StringÃimnëtoUpperCaseÃimsô()Ljava/lang/String;Ãimt¸&(Ljava/lang/String;)Ljava/lang/String;Âca\\u0082٠٠٠٠Ãtwo¶⒊FunåADD_AÅthree¶⒍UpdateäDEC...",
+                wire.bytes().toDebugString(349));
 
         @Nullable Function<String, String> function = wire.read().object(Function.class);
         assertEquals("HELLO", function.apply("hello"));

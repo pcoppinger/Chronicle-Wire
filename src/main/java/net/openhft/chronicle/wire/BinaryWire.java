@@ -1772,8 +1772,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut typeLiteral(@Nullable Class type) {
-            if (bytes.retainsComments())
-                bytes.comment(type == null ? null : type.getName());
+            if (bytes.retainsComments() && type != null)
+                bytes.comment(type.getName());
             if (type == null)
                 nu11();
             else
@@ -1977,7 +1977,16 @@ public class BinaryWire extends AbstractWire implements Wire {
         }
 
         @Override
+        public WireOut writeInt(IntConverter intConverter, int i) {
+            if (bytes.retainsComments())
+                bytes.comment(intConverter.asString(i));
+            return writeInt(i);
+        }
+
+        @Override
         public WireOut writeLong(LongConverter longConverter, long l) {
+            if (bytes.retainsComments())
+                bytes.comment(longConverter.asString(l));
             return writeLong(l);
         }
 
@@ -1999,11 +2008,12 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 58:
                 case 57:
                     // used when the value is written directly into the code byte
-                    bytes.writeUnsignedByte((int) l);
-                    return;
+//                    bytes.writeUnsignedByte((int) l);
+//                    return;
                 case 56:
                     super.uint8checked((short) l);
                     return;
+
                 case 55:
                 case 54:
                 case 53:
@@ -2013,9 +2023,11 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 49:
                     super.fixedInt16((short) l);
                     return;
+
                 case 48:
                     super.uint16checked((int) l);
                     return;
+
                 case 47:
                 case 46:
                 case 45:
@@ -2033,9 +2045,11 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 33:
                     super.fixedInt32((int) l);
                     return;
+
                 case 32:
                     super.uint32checked(l);
                     return;
+
                 case 0:
                     if (l >= Byte.MIN_VALUE) {
                         super.int8((byte) l);
@@ -2073,11 +2087,12 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 58:
                 case 57:
                     // used when the value is written directly into the code byte
-                    bytes.writeUnsignedByte(l);
-                    return;
+//                    bytes.writeUnsignedByte(l);
+//                    return;
                 case 56:
                     super.uint8checked((short) l);
                     return;
+
                 case 55:
                 case 54:
                 case 53:
@@ -2087,9 +2102,11 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 49:
                     super.fixedInt16((short) l);
                     return;
+
                 case 48:
                     super.uint16checked(l);
                     return;
+
                 case 47:
                 case 46:
                 case 45:
@@ -2107,18 +2124,18 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 33:
                     super.fixedInt32(l);
                     return;
+
                 case 32:
                     if (l >= Byte.MIN_VALUE) {
                         super.int8((byte) l);
-                        return;
-                    }
 
-                    if (l >= Short.MIN_VALUE) {
+                    } else if (l >= Short.MIN_VALUE) {
                         super.int16((short) l);
-                        return;
-                    }
 
-                    super.int32(l);
+                    } else {
+                        super.int32(l);
+                    }
+                    return;
             }
         }
 
@@ -2134,91 +2151,70 @@ public class BinaryWire extends AbstractWire implements Wire {
         void writeNumber(double l) {
             boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
             if (canOnlyBeRepresentedAsFloatingPoint) {
-
-                if (writeAsFloat(l)) return;
-
+                writeAsFloat(l);
             } else {
-
-                if (writeAsIntOrFloat(l)) return;
+                writeAsIntOrFloat(l);
             }
-            super.float64(l);
         }
 
         private void writeAsIntOrFloat(float l) {
             if (l >= 0) {
-                if (writeAsPositive(l))
-                    return;
-            }
+                writeAsPositive(l);
 
-            if (l >= Byte.MIN_VALUE && l <= Byte.MAX_VALUE) {
+            } else if (l >= Byte.MIN_VALUE) {
                 super.int8((byte) l);
-                return;
-            }
 
-            if (l >= Short.MIN_VALUE && l <= Short.MAX_VALUE) {
+            } else if (l >= Short.MIN_VALUE) {
                 super.int16((short) l);
-                return;
-            }
 
-            super.float32(l);
+            } else {
+                super.float32(l);
+            }
         }
 
-        private boolean writeAsIntOrFloat(double l) {
+        private void writeAsIntOrFloat(double l) {
             if (l >= 0) {
-                return writeAsPositive(l);
-            }
+                writeAsPositive(l);
 
-            if (l >= Byte.MIN_VALUE && l <= Byte.MAX_VALUE) {
+            } else if (l >= Byte.MIN_VALUE) {
                 super.int8((byte) l);
-                return true;
-            }
 
-            if (l >= Short.MIN_VALUE && l <= Short.MAX_VALUE) {
+            } else if (l >= Short.MIN_VALUE) {
                 super.int16((short) l);
-                return true;
-            }
 
-            if ((float) l == l) {
-                super.float32((float) l);
-                return true;
-            }
-
-            if (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE) {
+            } else if (l >= Integer.MIN_VALUE) {
                 super.int32((int) l);
-                return true;
+
+            } else if ((float) l == l) {
+                super.float32((float) l);
+
+            } else {
+                super.float64(l);
             }
-            return false;
         }
 
-        private boolean writeAsPositive(double l) {
-            if (l <= 127) {
+        private void writeAsPositive(double l) {
+/*            if (l <= 127) {
                 // used when the value is written directly into the code byte
                 bytes.writeUnsignedByte((int) l);
                 return true;
-            }
+            }*/
 
             if (l <= (1 << 8) - 1) {
                 super.uint8checked((short) l);
-                return true;
-            }
 
-            if (l <= (1 << 16) - 1) {
+            } else if (l <= (1 << 16) - 1) {
                 super.uint16checked((int) l);
-                return true;
-            }
 
-            if ((float) l == l) {
-                super.float32((float) l);
-                return true;
-            }
-
-            if (l <= (1L << 32L) - 1) {
+            } else if (l <= (1L << 32L) - 1) {
                 super.uint32checked((long) l);
-                return true;
-            }
 
-            super.float64(l);
-            return true;
+            } else if ((float) l == l) {
+                super.float32((float) l);
+
+            } else {
+                super.float64(l);
+            }
         }
 
         private void writeAsFloat(float l) {
@@ -2231,18 +2227,18 @@ public class BinaryWire extends AbstractWire implements Wire {
             super.float32(l);
         }
 
-        private boolean writeAsFloat(double l) {
+        private void writeAsFloat(double l) {
             long l6 = Math.round(l * 1e6);
             if (l6 / 1e6 == l && l6 > (-1L << 5 * 7) && l6 < (1L << 6 * 7)) {
                 if (writeAsFixedPoint(l, l6))
-                    return true;
+                    return;
             }
 
             if (((double) (float) l) == l || Double.isNaN(l)) {
                 super.float32((float) l);
-                return true;
+                return;
             }
-            return false;
+            super.float64(l);
         }
 
         private boolean writeAsFixedPoint(float l, long l6) {

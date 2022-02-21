@@ -539,7 +539,12 @@ public class GenerateMethodWriter {
             if (!name.isEmpty() && (WireType.TEXT == wireType || WireType.YAML == wireType))
                 body.append(format("//todo improve this\nvalueOut.rawText(new %s().asText(%s));\n", name, p.getName()));
             else if (p.getType().isPrimitive() || CharSequence.class.isAssignableFrom(p.getType())) {
-                body.append(format("%s.%s(%s);\n", dm.getParameterTypes().length > startJ + 1 ? "v" : "valueOut", toString(p.getType()), p.getName()));
+                if (longConversion.isPresent())
+                    body.append(format("%s.writeLong(%s.INSTANCE, %s);\n", dm.getParameterTypes().length > startJ + 1 ? "v" : "valueOut", longConversion.get(), p.getName()));
+                else if (intConversion.isPresent())
+                    body.append(format("%s.writeInt(%s.INSTANCE, %s);\n", dm.getParameterTypes().length > startJ + 1 ? "v" : "valueOut", intConversion.get(), p.getName()));
+                else
+                    body.append(format("%s.%s(%s);\n", dm.getParameterTypes().length > startJ + 1 ? "v" : "valueOut", toString(p.getType()), p.getName()));
             } else
                 writeValue(dm, body, startJ, p);
         }

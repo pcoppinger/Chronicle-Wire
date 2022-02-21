@@ -1321,7 +1321,7 @@ public class YamlWireTest extends WireTestCommon {
         wire.write("empty").object(a1);
         @NotNull Object[] a2 = {1L};
         wire.write("one").object(a2);
-        @NotNull Object[] a3 = {"Hello", 123, 10.1};
+        @NotNull Object[] a3 = {"Hello", 123L, 10.1};
         wire.write("three").object(Object[].class, a3);
 
         @Nullable Object o1 = wire.read()

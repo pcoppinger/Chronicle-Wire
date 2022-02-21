@@ -121,10 +121,12 @@ public class MethodWriterTest extends WireTestCommon {
                 "]\n" +
                 "...\n", wire.toString());
         assertEquals("" +
-                "14 00 00 00                                     # msg-length\n" +
-                "b9 05 65 76 65 6e 74 82 08 00 00 00             # event\n" +
-                "e3 74 77 6f                                     # two\n" +
-                "e3 74 77 6f                                     # two\n", wire2.bytes().toHexString());
+                        "14 00 00 00                                     # msg-length\n" +
+                        "b9 05 65 76 65 6e 74                            # event:\n" +
+                        "82 08 00 00 00                                  # sequence\n" +
+                        "e3 74 77 6f                                     # two\n" +
+                        "e3 74 77 6f                                     # two\n",
+                wire2.bytes().toHexString());
         wire2.bytes().releaseLast();
     }
 
@@ -237,11 +239,11 @@ public class MethodWriterTest extends WireTestCommon {
         assertEquals("primitives: [\n" +
                 "  true,\n" +
                 "  " + (byteShort ? "!byte " : "") + "1,\n" +
-                "  " + (byteShort ? "!short " : "")+ "2,\n" +
-                "  !int 3,\n" +
+                "  " + (byteShort ? "!short " : "") + "2,\n" +
+                "  3,\n" +
                 "  4,\n" +
                 "  \"5\",\n" +
-                "  !float 6.0,\n" +
+                "  6.0,\n" +
                 "  7.0,\n" +
                 "  \"8\",\n" +
                 "  \"9\"\n" +

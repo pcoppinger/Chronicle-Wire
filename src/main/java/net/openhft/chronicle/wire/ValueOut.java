@@ -785,22 +785,22 @@ public interface ValueOut {
 
     @NotNull
     default WireOut fixedFloat32(float value) {
-        return typePrefix(float.class).float32(value);
+        return float32(value);
     }
 
     @NotNull
     default WireOut fixedInt8(byte value) {
-        return typePrefix(byte.class).int8(value);
+        return int8(value);
     }
 
     @NotNull
     default WireOut fixedInt16(short value) {
-        return typePrefix(short.class).int16(value);
+        return int16(value);
     }
 
     @NotNull
     default WireOut fixedInt32(int value) {
-        return typePrefix(int.class).int32(value);
+        return int32(value);
     }
 
     @NotNull
@@ -965,6 +965,12 @@ public interface ValueOut {
 
     default WireOut writeString(CharSequence x) {
         return text(x);
+    }
+
+    default WireOut writeInt(IntConverter intConverter, int i) {
+        StringBuilder sb = Wires.acquireStringBuilder();
+        intConverter.append(sb, i);
+        return rawText(sb);
     }
 
     default WireOut writeLong(LongConverter longConverter, long l) {
