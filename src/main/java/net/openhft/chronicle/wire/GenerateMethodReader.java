@@ -24,6 +24,8 @@ import net.openhft.chronicle.core.Jvm;
 import net.openhft.chronicle.core.Maths;
 import net.openhft.chronicle.core.io.Closeable;
 import net.openhft.chronicle.core.util.Annotations;
+import net.openhft.chronicle.core.util.IgnoresEverything;
+import net.openhft.chronicle.wire.internal.GenericReflection;
 import net.openhft.chronicle.wire.utils.JavaSourceCodeFormatter;
 import net.openhft.chronicle.wire.utils.SourceCodeFormatter;
 import org.jetbrains.annotations.NotNull;
@@ -169,6 +171,7 @@ public class GenerateMethodReader {
             sourceCode.append("\n");
         }
 
+
         sourceCode.append(format("public %s(MarshallableIn in, WireParselet debugLoggingParselet," +
                 "Supplier<MethodReader> delegateSupplier, MethodReaderInterceptorReturns interceptor, " +
                 "Object... instances) {\n" +
@@ -181,6 +184,16 @@ public class GenerateMethodReader {
             sourceCode.append(format("instance%d = instances[%d];\n", i, i));
 
         sourceCode.append(format("instance%d = instances[%d];\n}\n\n", instances.length - 1, instances.length - 1));
+
+        if (hasChainedCalls) {
+            sourceCode.append("" +
+                            "@Override\n" +
+                            "public boolean restIgnored() {\n" +
+                            "  return chainedCallReturnResult instanceof ")
+                    .append(IgnoresEverything.class.getName())
+                    .append(";\n" +
+                            "}\n");
+        }
 
         sourceCode.append("@Override\n" +
                 "protected boolean readOneCall(WireIn wireIn) {\n" +
@@ -287,7 +300,7 @@ public class GenerateMethodReader {
 
         Class<?>[] parameterTypes = m.getParameterTypes();
 
-        Class<?> chainReturnType = m.getReturnType();
+        Class<?> chainReturnType = (Class<?>) GenericReflection.getReturnType(m, anInterface);
         if (chainReturnType != DocumentContext.class && (!chainReturnType.isInterface() || Jvm.dontChain(chainReturnType)))
             chainReturnType = null;
 
@@ -332,10 +345,10 @@ public class GenerateMethodReader {
         eventNameSwitchBlock.append(format("case \"%s\":\n", m.getName()));
         if (parameterTypes.length == 0) {
             eventNameSwitchBlock.append("valueIn.skipValue();\n");
-            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix));
+            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix, chainReturnType));
         } else if (parameterTypes.length == 1) {
             eventNameSwitchBlock.append(argumentRead(m, 0, false));
-            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix));
+            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix, chainReturnType));
         } else {
             if (methodFilter) {
                 eventNameSwitchBlock.append("ignored = false;\n");
@@ -368,7 +381,7 @@ public class GenerateMethodReader {
                 eventNameSwitchBlock.append("});\n");
             }
 
-            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix));
+            eventNameSwitchBlock.append(methodCall(m, instanceFieldName, chainedCallPrefix, chainReturnType));
 
             if (methodFilter)
                 eventNameSwitchBlock.append("}\n");
@@ -403,9 +416,10 @@ public class GenerateMethodReader {
      * @param m                 Method that is being processed.
      * @param instanceFieldName In generated code, method is executed on field with this name.
      * @param chainedCallPrefix Prefix for method call statement, passed in order to save method result for chaining.
+     * @param returnType
      * @return Code that performs a method call.
      */
-    private String methodCall(Method m, String instanceFieldName, String chainedCallPrefix) {
+    private String methodCall(Method m, String instanceFieldName, String chainedCallPrefix, Class<?> returnType) {
         StringBuilder res = new StringBuilder();
 
         Class<?>[] parameterTypes = m.getParameterTypes();
@@ -445,7 +459,7 @@ public class GenerateMethodReader {
             }
 
             String castPrefix = chainedCallPrefix.isEmpty() ?
-                    "" : "(" + m.getReturnType().getCanonicalName() + ")";
+                    "" : "(" + returnType.getCanonicalName() + ")";
 
             res.append(format("%s%sinterceptor.intercept(%smethod, %s, " +
                             "interceptor%sArgs, this::actualInvoke);\n",

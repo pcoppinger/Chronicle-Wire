@@ -70,7 +70,6 @@ public class BinaryWire extends AbstractWire implements Wire {
             return ((Marshallable) m).usesSelfDescribingMessage();
         return true;
     });
-    private static int SPEC = Integer.getInteger("BinaryWire.SPEC", 18);
     private final FixedBinaryValueOut fixedValueOut = new FixedBinaryValueOut();
     @NotNull
     private final FixedBinaryValueOut valueOut;
@@ -1527,6 +1526,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @Override
         @NotNull
         public WireOut fixedInt8(byte i8) {
+            if (bytes.retainsComments())
+                bytes.comment(Integer.toString(i8));
             writeCode(INT8).writeByte(i8);
             return BinaryWire.this;
         }
@@ -1534,6 +1535,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut uint8checked(int u8) {
+            if (bytes.retainsComments())
+                bytes.comment(Integer.toString(u8));
             writeCode(UINT8).writeUnsignedByte(u8);
             return BinaryWire.this;
         }
@@ -1547,6 +1550,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @Override
         @NotNull
         public WireOut fixedInt16(short i16) {
+            if (bytes.retainsComments())
+                bytes.comment(Integer.toString(i16));
             writeCode(INT16).writeShort(i16);
             return BinaryWire.this;
         }
@@ -1554,6 +1559,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut uint16checked(int u16) {
+            if (bytes.retainsComments())
+                bytes.comment(Integer.toString(u16));
             writeCode(UINT16).writeUnsignedShort(u16);
             return BinaryWire.this;
         }
@@ -1561,6 +1568,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut utf8(int codepoint) {
+            if (bytes.retainsComments())
+                bytes.comment(new String(Character.toChars(codepoint)));
             writeCode(UINT16);
             bytes.appendUtf8(codepoint);
             return BinaryWire.this;
@@ -1672,6 +1681,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @Override
         @NotNull
         public WireOut fixedFloat32(float f) {
+            if (bytes.retainsComments())
+                bytes.comment(Float.toString(f));
             writeCode(FLOAT32).writeFloat(f);
             return BinaryWire.this;
         }
@@ -1685,6 +1696,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @Override
         @NotNull
         public WireOut fixedFloat64(double d) {
+            if (bytes.retainsComments())
+                bytes.comment(Double.toString(d));
             writeCode(FLOAT64).writeDouble(d);
             return BinaryWire.this;
         }
@@ -1692,28 +1705,40 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut time(@NotNull LocalTime localTime) {
-            writeCode(TIME).writeUtf8(localTime.toString());
+            final String text = localTime.toString();
+            if (bytes.retainsComments())
+                bytes.comment(text);
+            writeCode(TIME).writeUtf8(text);
             return BinaryWire.this;
         }
 
         @NotNull
         @Override
         public WireOut zonedDateTime(@NotNull ZonedDateTime zonedDateTime) {
-            writeCode(ZONED_DATE_TIME).writeUtf8(zonedDateTime.toString());
+            final String text = zonedDateTime.toString();
+            if (bytes.retainsComments())
+                bytes.comment(text);
+            writeCode(ZONED_DATE_TIME).writeUtf8(text);
             return BinaryWire.this;
         }
 
         @NotNull
         @Override
         public WireOut date(@NotNull LocalDate localDate) {
-            writeCode(DATE).writeUtf8(localDate.toString());
+            final String text = localDate.toString();
+            if (bytes.retainsComments())
+                bytes.comment(text);
+            writeCode(DATE).writeUtf8(text);
             return BinaryWire.this;
         }
 
         @NotNull
         @Override
         public WireOut dateTime(@NotNull LocalDateTime localDateTime) {
-            writeCode(DATE_TIME).writeUtf8(localDateTime.toString());
+            final String text = localDateTime.toString();
+            if (bytes.retainsComments())
+                bytes.comment(text);
+            writeCode(DATE_TIME).writeUtf8(text);
             return BinaryWire.this;
         }
 
@@ -1747,6 +1772,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut typeLiteral(@Nullable Class type) {
+            if (bytes.retainsComments())
+                bytes.comment(type == null ? null : type.getName());
             if (type == null)
                 nu11();
             else
@@ -1757,6 +1784,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut typeLiteral(@NotNull BiConsumer<Class, Bytes> typeTranslator, @Nullable Class type) {
+            if (bytes.retainsComments())
+                bytes.comment(type == null ? null : type.getName());
             writeCode(TYPE_LITERAL);
             typeTranslator.accept(type, bytes);
             return BinaryWire.this;
@@ -1765,6 +1794,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut uuid(@NotNull UUID uuid) {
+            if (bytes.retainsComments())
+                bytes.comment(uuid.toString());
             writeCode(UUID).writeLong(uuid.getMostSignificantBits()).writeLong(uuid.getLeastSignificantBits());
             return BinaryWire.this;
         }
@@ -1772,6 +1803,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut int32forBinding(int value) {
+            if (bytes.retainsComments())
+                bytes.comment("int32 for binding");
             writeAlignTo(Integer.BYTES, 1);
             fixedInt32(value);
             return BinaryWire.this;
@@ -1780,6 +1813,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut int64forBinding(long value) {
+            if (bytes.retainsComments())
+                bytes.comment("int64 for binding");
             writeAlignTo(Long.BYTES, 1);
             fixedOrderedInt64(value);
             return BinaryWire.this;
@@ -1788,6 +1823,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut int32forBinding(int value, @NotNull IntValue intValue) {
+            if (bytes.retainsComments())
+                bytes.comment("int32 for binding");
             int32forBinding(value);
             ((BinaryIntReference) intValue).bytesStore(bytes, bytes.writePosition() - 4, 4);
             return BinaryWire.this;
@@ -1796,6 +1833,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut int64forBinding(long value, @NotNull LongValue longValue) {
+            if (bytes.retainsComments())
+                bytes.comment("int64 for binding");
             int64forBinding(value);
             ((BinaryLongReference) longValue).bytesStore(bytes, bytes.writePosition() - 8, 8);
             return BinaryWire.this;
@@ -1821,6 +1860,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public <T> WireOut sequence(T t, @NotNull BiConsumer<T, ValueOut> writer) {
+            if (bytes.retainsComments())
+                bytes.comment("sequence");
             writeCode(BYTES_LENGTH32);
             long position = bytes.writePosition();
             bytes.writeInt(0);
@@ -1842,6 +1883,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public <T, K> WireOut sequence(T t, K kls, @NotNull TriConsumer<T, K, ValueOut> writer) {
+            if (bytes.retainsComments())
+                bytes.comment("sequence");
             writeCode(BYTES_LENGTH32);
             long position = bytes.writePosition();
             bytes.writeInt(0);
@@ -1857,7 +1900,7 @@ public class BinaryWire extends AbstractWire implements Wire {
         public WireOut marshallable(@NotNull WriteMarshallable object) {
             if (bytes.retainsComments())
                 bytes.comment(object.getClass().getSimpleName());
-            final BinaryLengthLength binaryLengthLength = object.binaryWireSize();
+            final BinaryLengthLength binaryLengthLength = object.binaryLengthLength();
             long pos = binaryLengthLength.initialise(bytes);
 
             if (useSelfDescribingMessage(object))
@@ -1889,6 +1932,8 @@ public class BinaryWire extends AbstractWire implements Wire {
         @NotNull
         @Override
         public WireOut marshallable(@NotNull Serializable object) {
+            if (bytes.retainsComments())
+                bytes.comment(object.getClass().getSimpleName());
             writeCode(BYTES_LENGTH32);
             long position = bytes.writePosition();
             bytes.writeInt(0);
@@ -2077,6 +2122,15 @@ public class BinaryWire extends AbstractWire implements Wire {
             }
         }
 
+        void writeNumber(float l) {
+            boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
+            if (canOnlyBeRepresentedAsFloatingPoint) {
+                writeAsFloat(l);
+            } else {
+                writeAsIntOrFloat(l);
+            }
+        }
+
         void writeNumber(double l) {
             boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
             if (canOnlyBeRepresentedAsFloatingPoint) {
@@ -2088,6 +2142,25 @@ public class BinaryWire extends AbstractWire implements Wire {
                 if (writeAsIntOrFloat(l)) return;
             }
             super.float64(l);
+        }
+
+        private void writeAsIntOrFloat(float l) {
+            if (l >= 0) {
+                if (writeAsPositive(l))
+                    return;
+            }
+
+            if (l >= Byte.MIN_VALUE && l <= Byte.MAX_VALUE) {
+                super.int8((byte) l);
+                return;
+            }
+
+            if (l >= Short.MIN_VALUE && l <= Short.MAX_VALUE) {
+                super.int16((short) l);
+                return;
+            }
+
+            super.float32(l);
         }
 
         private boolean writeAsIntOrFloat(double l) {
@@ -2148,17 +2221,49 @@ public class BinaryWire extends AbstractWire implements Wire {
             return true;
         }
 
+        private void writeAsFloat(float l) {
+            long l6 = Math.round(l * 1e6);
+            if (l6 / 1e6f == l && l6 > (-1L << 2 * 7) && l6 < (1L << 3 * 7)) {
+                if (writeAsFixedPoint(l, l6))
+                    return;
+            }
+
+            super.float32(l);
+        }
+
         private boolean writeAsFloat(double l) {
+            long l6 = Math.round(l * 1e6);
+            if (l6 / 1e6 == l && l6 > (-1L << 5 * 7) && l6 < (1L << 6 * 7)) {
+                if (writeAsFixedPoint(l, l6))
+                    return true;
+            }
+
             if (((double) (float) l) == l || Double.isNaN(l)) {
                 super.float32((float) l);
                 return true;
             }
+            return false;
+        }
 
-            if (SPEC >= 18) {
-                long l6 = Math.round(l * 1e6);
-                if (l6 / 1e6 == l && l6 > (-1L << 35) && l6 < (1L << 42)) {
-                    return writeAsFixedPoint(l, l6);
-                }
+        private boolean writeAsFixedPoint(float l, long l6) {
+            long i2 = l6 / 10000;
+            if (i2 / 1e2f == l) {
+                if (bytes.retainsComments()) bytes.comment(i2 + "/1e2");
+                writeCode(FLOAT_STOP_2).writeStopBit(i2);
+                return true;
+            }
+
+            long i4 = l6 / 100;
+            if (i4 / 1e4f == l) {
+                if (bytes.retainsComments()) bytes.comment(i4 + "/1e4");
+                writeCode(FLOAT_STOP_4).writeStopBit(i4);
+                return true;
+            }
+
+            if (l6 / 1e6f == l) {
+                if (bytes.retainsComments()) bytes.comment(l6 + "/1e6");
+                writeCode(FLOAT_STOP_6).writeStopBit(l6);
+                return true;
             }
             return false;
         }
@@ -2166,17 +2271,20 @@ public class BinaryWire extends AbstractWire implements Wire {
         private boolean writeAsFixedPoint(double l, long l6) {
             long i2 = l6 / 10000;
             if (i2 / 1e2 == l) {
+                if (bytes.retainsComments()) bytes.comment(i2 + "/1e2");
                 writeCode(FLOAT_STOP_2).writeStopBit(i2);
                 return true;
             }
 
             long i4 = l6 / 100;
             if (i4 / 1e4 == l) {
+                if (bytes.retainsComments()) bytes.comment(i4 + "/1e4");
                 writeCode(FLOAT_STOP_4).writeStopBit(i4);
                 return true;
             }
 
             if (l6 / 1e6 == l) {
+                if (bytes.retainsComments()) bytes.comment(l6 + "/1e6");
                 writeCode(FLOAT_STOP_6).writeStopBit(l6);
                 return true;
             }

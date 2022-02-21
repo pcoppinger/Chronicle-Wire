@@ -83,13 +83,13 @@ public class GenerateMethodWriter2 extends AbstractClassGenerator<GenerateMethod
         } else if (short.class.equals(type)) {
             return "int16";
         } else if (int.class.equals(type)) {
-            return "fixedInt32";
+            return "int32";
         } else if (long.class.equals(type)) {
-            return "fixedInt64";
+            return "int64";
         } else if (float.class.equals(type)) {
-            return "fixedFloat32";
+            return "float32";
         } else if (double.class.equals(type)) {
-            return "fixedFloat64";
+            return "float64";
         } else if (CharSequence.class.isAssignableFrom(type)) {
             return "text";
         } else if (Marshallable.class.isAssignableFrom(type)) {
