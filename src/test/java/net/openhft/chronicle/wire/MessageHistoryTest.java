@@ -102,13 +102,15 @@ public class MessageHistoryTest extends WireTestCommon {
         BinaryWire bw = new BinaryWire(new HexDumpBytes());
         bw.writeEventName(MethodReader.HISTORY).marshallable(history);
         assertEquals("" +
-                        "b9 07 68 69 73 74 6f 72 79                      # history\n" +
-                        "82 3d 00 00 00                                  # SetTimeMessageHistory\n" +
-                        "c7 73 6f 75 72 63 65 73                         # sources\n" +
-                        "82 14 00 00 00                                  # sequence\n" +
-                        "01 af ff 00 00 00 00 00 00 00                   # source id & index\n" +
-                        "02 af ff 0f 00 00 00 00 00 00                   # source id & index\n" +
-                        "c7 74 69 6d 69 6e 67 73                         # timings\n" +
+                        "b9 07 68 69 73 74 6f 72 79                      # history:\n" +
+                        "82 3f 00 00 00                                  # SetTimeMessageHistory\n" +
+                        "c7 73 6f 75 72 63 65 73                         # sources:\n" +
+                        "82 16 00 00 00                                  # sequence\n" +
+                        "                                                # source id & index\n" +
+                        "a1 01 af ff 00 00 00 00 00 00 00                # 1\n" +
+                        "                                                # source id & index\n" +
+                        "a1 02 af ff 0f 00 00 00 00 00 00                # 2\n" +
+                        "c7 74 69 6d 69 6e 67 73                         # timings:\n" +
                         "82 0f 00 00 00                                  # sequence\n" +
                         "                                                # timing in nanos\n" +
                         "a5 10 27                                        # 10000\n" +
@@ -146,12 +148,13 @@ public class MessageHistoryTest extends WireTestCommon {
         wire.writeEventId(MESSAGE_HISTORY_METHOD_ID).object(SetTimeMessageHistory.class, vmh);
 
         assertEquals("" +
-                        "c7 68 69 73 74 6f 72 79                         # history\n" +
-                        "82 33 00 00 00                                  # SetTimeMessageHistory\n" +
-                        "c7 73 6f 75 72 63 65 73                         # sources\n" +
-                        "82 0a 00 00 00                                  # sequence\n" +
-                        "01 af 02 00 00 00 00 00 00 00                   # source id & index\n" +
-                        "c7 74 69 6d 69 6e 67 73                         # timings\n" +
+                        "c7 68 69 73 74 6f 72 79                         # history:\n" +
+                        "82 34 00 00 00                                  # SetTimeMessageHistory\n" +
+                        "c7 73 6f 75 72 63 65 73                         # sources:\n" +
+                        "82 0b 00 00 00                                  # sequence\n" +
+                        "                                                # source id & index\n" +
+                        "a1 01 af 02 00 00 00 00 00 00 00                # 1\n" +
+                        "c7 74 69 6d 69 6e 67 73                         # timings:\n" +
                         "82 0f 00 00 00                                  # sequence\n" +
                         "                                                # timing in nanos\n" +
                         "a5 57 04                                        # 1111\n" +
