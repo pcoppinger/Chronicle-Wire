@@ -2157,6 +2157,15 @@ public class BinaryWire extends AbstractWire implements Wire {
             }
         }
 
+        void writeNumber(float l) {
+            boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
+            if (canOnlyBeRepresentedAsFloatingPoint) {
+                writeAsFloat(l);
+            } else {
+                writeAsIntOrFloat(l);
+            }
+        }
+
         void writeNumber(double l) {
             boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
             if (canOnlyBeRepresentedAsFloatingPoint) {
@@ -2248,6 +2257,16 @@ public class BinaryWire extends AbstractWire implements Wire {
                 return;
             }
             super.float64(l);
+        }
+
+        private boolean writeAsFixedPoint(float l, long l6) {
+            long i2 = l6 / 10000;
+            if (i2 / 1e2f == l) {
+                if (bytes.retainsComments()) bytes.comment(i2 + "/1e2");
+                writeCode(FLOAT_STOP_2).writeStopBit(i2);
+                return true;
+            }
+            return false;
         }
 
         private boolean writeAsFixedPoint(float l, long l6) {
