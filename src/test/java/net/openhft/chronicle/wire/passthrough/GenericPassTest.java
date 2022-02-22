@@ -24,19 +24,7 @@ public class GenericPassTest {
                 wire1.toString());
 
         Wire wire2 = new TextWire(Bytes.allocateElasticOnHeap()).useTextDocuments();
-        final DocumentContextBroker microService = new DocumentContextBroker() {
-            @Override
-            public DocumentContext via(String name) {
-                final DocumentContext dc = wire2.writingDocument();
-                dc.wire().write("via").text(name);
-                return dc;
-            }
-
-            @Override
-            public Saying also(String name) {
-                return null;
-            }
-        };
+        final DocumentContextBroker microService = new MyDocumentContextBroker(wire2);
         final MethodReader reader = wire1.methodReader(microService);
         assertTrue(reader.readOne());
         assertFalse(reader.readOne());
@@ -45,6 +33,37 @@ public class GenericPassTest {
                         "say: hello\n" +
                         "...\n",
                 wire2.toString());
+    }
+
+    @Test
+    public void passingOpaqueMessage() {
+        Bytes bytes0 = Bytes.allocateElasticOnHeap(1);
+        // invalid in every wire
+        bytes0.writeUnsignedByte(0x82);
+        Wire wire0 = new TextWire(bytes0).useTextDocuments();
+        try {
+            wire0.readEvent(String.class);
+            fail();
+        } catch (IllegalStateException ise) {
+            // expected.
+        }
+
+        Wire wire1 = new TextWire(Bytes.allocateElasticOnHeap()).useTextDocuments();
+        wire1.write("via").text("pass");
+        wire1.bytes().writeUnsignedByte(0x82);
+
+        Wire wire2 = new TextWire(Bytes.allocateElasticOnHeap()).useTextDocuments();
+        final DocumentContextBroker microService = new MyDocumentContextBroker(wire2);
+        final MethodReader reader = wire1.methodReader(microService);
+        assertTrue(reader.readOne());
+        assertFalse(reader.readOne());
+        // the ... is added by the wire format.
+        assertEquals("" +
+                        "via: pass\n" +
+                        "\u0082\n" +
+                        "...\n",
+                wire2.toString());
+
     }
 
     interface Broker<T> {
@@ -65,5 +84,25 @@ public class GenericPassTest {
 
     interface SayingBroker extends Broker<Saying> {
 
+    }
+
+    private static class MyDocumentContextBroker implements DocumentContextBroker {
+        private final Wire wire2;
+
+        public MyDocumentContextBroker(Wire wire2) {
+            this.wire2 = wire2;
+        }
+
+        @Override
+        public DocumentContext via(String name) {
+            final DocumentContext dc = wire2.writingDocument();
+            dc.wire().write("via").text(name);
+            return dc;
+        }
+
+        @Override
+        public Saying also(String name) {
+            return null;
+        }
     }
 }
