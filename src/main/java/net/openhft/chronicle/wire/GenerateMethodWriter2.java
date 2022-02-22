@@ -118,8 +118,8 @@ public class GenerateMethodWriter2 extends AbstractClassGenerator<GenerateMethod
                 .append(nameForClass(Supplier.class)).append("<").append(nameForClass(MarshallableOut.class)).append("> outSupplier, ")
                 .append(nameForClass(Closeable.class)).append(" closeable, ")
                 .append(nameForClass(UpdateInterceptor.class)).append(" updateInterceptor) {\n" +
-                "this.outSupplier = outSupplier;\n" +
-                "this.closeable = closeable;\n");
+                        "this.outSupplier = outSupplier;\n" +
+                        "this.closeable = closeable;\n");
         if (metaData().useUpdateInterceptor())
             mainCode.append("this.updateInterceptor = updateInterceptor;");
         mainCode.append("}\n");
@@ -138,12 +138,19 @@ public class GenerateMethodWriter2 extends AbstractClassGenerator<GenerateMethod
 
         boolean terminating = returnType == Void.class || returnType == void.class || returnType.isPrimitive();
         String wdc = nameForClass(WriteDocumentContext.class);
+        boolean passthrough = returnType == DocumentContext.class;
         withLineNumber(mainCode)
-                .append("MarshallableOut out = this.outSupplier.get();\n"
-                        + "try (final ").append(wdc).append(" dc = (").append(wdc).append(") out.acquireWritingDocument(")
+                .append("MarshallableOut out = this.outSupplier.get();\n");
+        if (!passthrough)
+            withLineNumber(mainCode)
+                    .append("try (");
+        mainCode.append("final ").append(wdc).append(" dc = (").append(wdc).append(") out.acquireWritingDocument(")
                 .append(metaData().metaData())
-                .append(")) {\n");
-        mainCode.append("dc.chainedElement(" + !terminating + ");\n");
+                .append(")");
+        if (passthrough)
+            mainCode.append(";\n");
+        else mainCode.append(") {\n");
+        mainCode.append("dc.chainedElement(" + (!terminating && !passthrough) + ");\n");
         mainCode.append("if (out.recordHistory()) MessageHistory.writeHistory(dc);\n");
 
         int startJ = 0;

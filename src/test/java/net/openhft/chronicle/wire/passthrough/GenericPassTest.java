@@ -76,11 +76,19 @@ public class GenericPassTest {
             // expected.
         }
 
-        Wire wire1 = new BinaryWire(Bytes.allocateElasticOnHeap());
-        try (DocumentContext dc = wire1.writingDocument()) {
-            dc.wire().write("via").text("pass")
-                    .bytes().writeUnsignedByte(0x82);
+        Wire wire1 = new BinaryWire(new HexDumpBytes());
+        final DocumentContextBroker dcb = wire1.methodWriter(DocumentContextBroker.class);
+        try (DocumentContext dc = dcb.via("pass")) {
+            dc.wire().bytes()
+                    .comment("opaque message")
+                    .writeUnsignedByte(0x82);
         }
+        assertEquals("" +
+                        "0b 00 00 00                                     # msg-length\n" +
+                        "b9 03 76 69 61                                  # via:\n" +
+                        "e4 70 61 73 73                                  # pass\n" +
+                        "82                                              # opaque message\n",
+                wire1.bytes().toHexString());
 
         Wire wire2 = new BinaryWire(new HexDumpBytes());
         final DocumentContextBroker microService = new MyDocumentContextBroker(wire2);
@@ -89,8 +97,8 @@ public class GenericPassTest {
         assertFalse(reader.readOne());
         // the ... is added by the wire format.
         assertEquals("" +
-                        "0a 00 00 00                                     # msg-length\n" +
-                        "c3 76 69 61                                     # via:\n" +
+                        "0b 00 00 00                                     # msg-length\n" +
+                        "b9 03 76 69 61                                  # via:\n" +
                         "e4 70 61 73 73                                  # pass\n" +
                         "82                                              # passed-through\n",
                 wire2.bytes().toHexString());
@@ -126,7 +134,7 @@ public class GenericPassTest {
         @Override
         public DocumentContext via(String name) {
             final DocumentContext dc = wire2.writingDocument();
-            dc.wire().write("via").text(name);
+            dc.wire().writeEvent(String.class, "via").text(name);
             return dc;
         }
 
