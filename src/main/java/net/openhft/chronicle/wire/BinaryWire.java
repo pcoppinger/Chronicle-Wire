@@ -3804,7 +3804,7 @@ public class BinaryWire extends AbstractWire implements Wire {
                             } else {
                                 long pos = bytes.readPosition();
                                 bytes.uncheckedReadSkipOne();
-                                int len = code == BYTES_LENGTH16 ? bytes.readUnsignedShort() : bytes.readInt();
+                                int len = readLength(code);
                                 code = peekCode();
                                 if (code == U8_ARRAY) {
                                     bytes.readPosition(pos);
@@ -3903,6 +3903,24 @@ public class BinaryWire extends AbstractWire implements Wire {
             }
             // assume it a String
             return text();
+        }
+
+        private int readLength(int code) {
+            int len;
+            switch (code) {
+                case BYTES_LENGTH8:
+                    len = bytes.readUnsignedByte();
+                    break;
+                case BYTES_LENGTH16:
+                    len = bytes.readUnsignedShort();
+                    break;
+                case BYTES_LENGTH32:
+                    len = bytes.readInt();
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+            return len;
         }
 
         private boolean isEvent(int code) {
