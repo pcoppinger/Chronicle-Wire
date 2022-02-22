@@ -1,11 +1,9 @@
 package net.openhft.chronicle.wire.passthrough;
 
 import net.openhft.chronicle.bytes.Bytes;
+import net.openhft.chronicle.bytes.HexDumpBytes;
 import net.openhft.chronicle.bytes.MethodReader;
-import net.openhft.chronicle.wire.DocumentContext;
-import net.openhft.chronicle.wire.TextWire;
-import net.openhft.chronicle.wire.Wire;
-import net.openhft.chronicle.wire.WireType;
+import net.openhft.chronicle.wire.*;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -42,9 +40,9 @@ public class GenericPassTest {
         bytes0.writeUnsignedByte(0x82);
         Wire wire0 = new TextWire(bytes0).useTextDocuments();
         try {
-            wire0.readEvent(String.class);
+            wire0.getValueIn().object();
             fail();
-        } catch (IllegalStateException ise) {
+        } catch (Exception ise) {
             // expected.
         }
 
@@ -63,7 +61,39 @@ public class GenericPassTest {
                         "\u0082\n" +
                         "...\n",
                 wire2.toString());
+    }
 
+    @Test
+    public void passingOpaqueMessageBinary() {
+        Bytes bytes0 = Bytes.allocateElasticOnHeap(1);
+        // invalid in every wire
+        bytes0.writeUnsignedByte(0x82);
+        Wire wire0 = new BinaryWire(bytes0);
+        try {
+            wire0.getValueIn().object();
+            fail();
+        } catch (Exception ise) {
+            // expected.
+        }
+
+        Wire wire1 = new BinaryWire(Bytes.allocateElasticOnHeap());
+        try (DocumentContext dc = wire1.writingDocument()) {
+            dc.wire().write("via").text("pass")
+                    .bytes().writeUnsignedByte(0x82);
+        }
+
+        Wire wire2 = new BinaryWire(new HexDumpBytes());
+        final DocumentContextBroker microService = new MyDocumentContextBroker(wire2);
+        final MethodReader reader = wire1.methodReader(microService);
+        assertTrue(reader.readOne());
+        assertFalse(reader.readOne());
+        // the ... is added by the wire format.
+        assertEquals("" +
+                        "0a 00 00 00                                     # msg-length\n" +
+                        "c3 76 69 61                                     # via:\n" +
+                        "e4 70 61 73 73                                  # pass\n" +
+                        "82                                              # passed-through\n",
+                wire2.bytes().toHexString());
     }
 
     interface Broker<T> {

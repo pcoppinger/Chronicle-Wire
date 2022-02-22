@@ -232,6 +232,15 @@ public class BinaryWire extends AbstractWire implements Wire {
 
     @Override
     public void copyTo(@NotNull WireOut wire) {
+        if (wire.getClass() == getClass()) {
+            final Bytes<?> bytes2 = wire.bytes();
+            if (bytes2.retainsComments())
+                bytes2.comment("passed-through");
+            bytes2.write(this.bytes);
+            this.bytes.readPosition(this.bytes.readLimit());
+            return;
+        }
+
         while (bytes.readRemaining() > 0) {
             copyOne(wire);
         }
