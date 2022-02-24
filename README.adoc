@@ -425,19 +425,18 @@ The benefits of using this approach are that:
 * The reader (tailer) is blocked until the message is completely written.
 * If you have concurrent writers (appenders):
 ** If the message size is not known, other writers will be blocked until the message is written completely.
-** If the message size is known, other writers will leave buffer space for this writer to complete writing the message and
-   concurrently write beyond the known size.
+** If the message size is known, other writers will leave buffer space for this writer to complete writing the message and concurrently write beyond the known size.
 
-Figure 1 indicates the mechanism of thread-safe message writing. There is a 32-bit field called "len" in the
-start of the message that an appender writes to buffer. The "len" field includes:
+Figure 1 indicates the mechanism of thread-safe message writing.There is a 32-bit field called "len" in the
+start of the message that an appender writes to buffer.The "len" field includes:
 
 1. "complete" flag that shows whether the appender has completed writing this message or not.
 2. "metadata" flag that shows whether this data is metadata.
 3. the actual size of data in the remaining 30 bits of the "len" field.
 
 After completing writing the message, the appender returns to the "len" field and sets the "complete" flag to one so that it indicates the message was written
-completely. Afterwards, the reader starts reading the message. If the message size is not known, appender 2 also
-stops writing until the message is written completely. If the size of the message is known, appender 2 leaves the
+completely.Afterwards, the reader starts reading the message.If the message size is not known, appender 2 also
+stops writing until the message is written completely.If the size of the message is known, appender 2 leaves the
 required space for appender 1's message and concurrently writes beyond that, as Figure 1 shows.
 
 [#img-buffer]
@@ -897,10 +896,10 @@ Chronicle Wire offers the ability to bind a reference to a fixed value of a fiel
 ----
    // field to cache the location and object used to reference a field.
    private LongValue counter = null;
-    
+
    // find the field and bind an approritae wrapper for the wire format.
    wire.read(COUNTER).int64(counter, x -> counter = x);
-    
+
    // thread safe across processes on the same machine.
    long id = counter.getAndAdd(1);
 ----
@@ -1056,6 +1055,7 @@ NOTE: The unique key for these objects is their type and name. Two objects of di
 IMPORTANT: These objects passed by reference are never cleaned up. Only use them when there is likely to be a limited number of them over the life of the application.
 
 == Using @MethodId
+
 You can assign a method id to a method using the annotation `@MethodId(long int: id)`.
 The provided id should be unique across all classes using the same MethodReader/Writer, therefore
 it is safe practice to use unique method id in your entire system.A method name can be determined
