@@ -122,7 +122,7 @@ public class MethodWriterTest extends WireTestCommon {
                 "...\n", wire.toString());
         assertEquals("" +
                         "14 00 00 00                                     # msg-length\n" +
-                        "b9 05 65 76 65 6e 74                            # event:\n" +
+                        "b9 05 65 76 65 6e 74                            # event: (event)\n" +
                         "82 08 00 00 00                                  # sequence\n" +
                         "e3 74 77 6f                                     # two\n" +
                         "e3 74 77 6f                                     # two\n",
@@ -236,14 +236,15 @@ public class MethodWriterTest extends WireTestCommon {
         Args writer = wire.methodWriter(Args.class);
         checkWriterType(writer);
         writer.primitives(true, (byte) 1, (short) 2, 3, 4, '5', 6, 7, "8", "9");
-        assertEquals("primitives: [\n" +
+        assertEquals("" +
+                "primitives: [\n" +
                 "  true,\n" +
-                "  " + (byteShort ? "!byte " : "") + "1,\n" +
-                "  " + (byteShort ? "!short " : "") + "2,\n" +
-                "  3,\n" +
+                "  !byte 1,\n" +
+                "  !short 2,\n" +
+                "  !int 3,\n" +
                 "  4,\n" +
                 "  \"5\",\n" +
-                "  6.0,\n" +
+                "  !float 6.0,\n" +
                 "  7.0,\n" +
                 "  \"8\",\n" +
                 "  \"9\"\n" +

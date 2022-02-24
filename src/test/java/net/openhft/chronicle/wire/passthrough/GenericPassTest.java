@@ -85,7 +85,7 @@ public class GenericPassTest {
         }
         assertEquals("" +
                         "0b 00 00 00                                     # msg-length\n" +
-                        "b9 03 76 69 61                                  # via:\n" +
+                        "b9 03 76 69 61                                  # via: (event)\n" +
                         "e4 70 61 73 73                                  # pass\n" +
                         "82                                              # opaque message\n",
                 wire1.bytes().toHexString());
@@ -98,7 +98,7 @@ public class GenericPassTest {
         // the ... is added by the wire format.
         assertEquals("" +
                         "0b 00 00 00                                     # msg-length\n" +
-                        "b9 03 76 69 61                                  # via:\n" +
+                        "b9 03 76 69 61                                  # via: (event)\n" +
                         "e4 70 61 73 73                                  # pass\n" +
                         "82                                              # passed-through\n",
                 wire2.bytes().toHexString());

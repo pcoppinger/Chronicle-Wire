@@ -1094,7 +1094,7 @@ public class BinaryWire extends AbstractWire implements Wire {
     @Override
     public ValueOut writeEventName(@NotNull CharSequence name) {
         if (bytes.retainsComments())
-            bytes.comment(name + ":");
+            bytes.comment(name + ": (event)");
         writeCode(EVENT_NAME).write8bit(name);
         return valueOut;
     }
@@ -2017,8 +2017,8 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 58:
                 case 57:
                     // used when the value is written directly into the code byte
-//                    bytes.writeUnsignedByte((int) l);
-//                    return;
+                    bytes.writeUnsignedByte((int) l);
+                    return;
                 case 56:
                     super.uint8checked((short) l);
                     return;
@@ -2096,8 +2096,8 @@ public class BinaryWire extends AbstractWire implements Wire {
                 case 58:
                 case 57:
                     // used when the value is written directly into the code byte
-//                    bytes.writeUnsignedByte(l);
-//                    return;
+                    bytes.writeUnsignedByte(l);
+                    return;
                 case 56:
                     super.uint8checked((short) l);
                     return;
@@ -2157,15 +2157,6 @@ public class BinaryWire extends AbstractWire implements Wire {
             }
         }
 
-        void writeNumber(float l) {
-            boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
-            if (canOnlyBeRepresentedAsFloatingPoint) {
-                writeAsFloat(l);
-            } else {
-                writeAsIntOrFloat(l);
-            }
-        }
-
         void writeNumber(double l) {
             boolean canOnlyBeRepresentedAsFloatingPoint = ((long) l) != l;
             if (canOnlyBeRepresentedAsFloatingPoint) {
@@ -2200,11 +2191,11 @@ public class BinaryWire extends AbstractWire implements Wire {
             } else if (l >= Short.MIN_VALUE) {
                 super.int16((short) l);
 
-            } else if (l >= Integer.MIN_VALUE) {
-                super.int32((int) l);
-
             } else if ((float) l == l) {
                 super.float32((float) l);
+
+            } else if (l >= Integer.MIN_VALUE) {
+                super.int32((int) l);
 
             } else {
                 super.float64(l);
@@ -2212,11 +2203,11 @@ public class BinaryWire extends AbstractWire implements Wire {
         }
 
         private void writeAsPositive(double l) {
-/*            if (l <= 127) {
+            if (l <= 127) {
                 // used when the value is written directly into the code byte
                 bytes.writeUnsignedByte((int) l);
-                return true;
-            }*/
+                return;
+            }
 
             if (l <= (1 << 8) - 1) {
                 super.uint8checked((short) l);
@@ -2224,11 +2215,11 @@ public class BinaryWire extends AbstractWire implements Wire {
             } else if (l <= (1 << 16) - 1) {
                 super.uint16checked((int) l);
 
-            } else if (l <= (1L << 32L) - 1) {
-                super.uint32checked((long) l);
-
             } else if ((float) l == l) {
                 super.float32((float) l);
+
+            } else if (l <= (1L << 32L) - 1) {
+                super.uint32checked((long) l);
 
             } else {
                 super.float64(l);
@@ -2257,16 +2248,6 @@ public class BinaryWire extends AbstractWire implements Wire {
                 return;
             }
             super.float64(l);
-        }
-
-        private boolean writeAsFixedPoint(float l, long l6) {
-            long i2 = l6 / 10000;
-            if (i2 / 1e2f == l) {
-                if (bytes.retainsComments()) bytes.comment(i2 + "/1e2");
-                writeCode(FLOAT_STOP_2).writeStopBit(i2);
-                return true;
-            }
-            return false;
         }
 
         private boolean writeAsFixedPoint(float l, long l6) {

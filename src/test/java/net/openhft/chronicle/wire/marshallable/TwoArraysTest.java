@@ -17,18 +17,16 @@ public class TwoArraysTest extends WireTestCommon {
         Wire wire = new BinaryWire(bytes);
         TwoArrays ta = new TwoArrays(4, 8);
         ta.writeMarshallable(wire);
-        assertEquals("" +
-                        "   c2 69 61                                        # ia:\n" +
-                        "   82 20 00 00 00 04 00 00 00 00 00 00 00 00 00 00 # BinaryIntArrayReference\n" +
-                        "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
-                        "   00 00 00 00 00 c2 6c 61                         # la:\n" +
-                        "   82 50 00 00 00 08 00 00 00 00 00 00 00 00 00 00 # BinaryLongArrayReference\n" +
-                        "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
-                        "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
-                        "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
-                        "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
-                        "   00 00 00 00 00\n",
-                bytes.toHexString());
+        assertEquals("   c2 69 61                                        # ia:\n" +
+                "   82 20 00 00 00 04 00 00 00 00 00 00 00 00 00 00 # BinaryIntArrayReference\n" +
+                "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
+                "   00 00 00 00 00 c2 6c 61                         # la:\n" +
+                "   82 50 00 00 00 08 00 00 00 00 00 00 00 00 00 00 # BinaryLongArrayReference\n" +
+                "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
+                "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
+                "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
+                "   00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n" +
+                "   00 00 00 00 00\n", bytes.toHexString());
 
         TwoArrays ta2 = new TwoArrays(0, 0);
         ta2.readMarshallable(wire);
