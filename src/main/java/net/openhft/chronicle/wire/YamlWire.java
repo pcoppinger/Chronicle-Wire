@@ -38,6 +38,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.nio.BufferUnderflowException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -408,6 +409,14 @@ public class YamlWire extends AbstractWire implements Wire {
             YamlToken next = yt.next();
             if (next == YamlToken.MAPPING_KEY) {
                 return readEvent(expectedClass);
+            }
+            if (next == YamlToken.TAG) {
+                StringBuilder sb = acquireStringBuilder();
+                yt.text(sb);
+                final Class aClass = classLookup.forName(sb);
+                if (expectedClass.isAssignableFrom(aClass))
+                    expectedClass = aClass;
+                next = yt.next();
             }
             if (next == YamlToken.TEXT) {
                 sb.setLength(0);
@@ -2113,9 +2122,36 @@ public class YamlWire extends AbstractWire implements Wire {
         }
 
         @Override
-        public byte @NotNull [] bytes(byte[] using) {
+        public byte[] bytes(byte[] using) {
             consumePadding();
-            throw new UnsupportedOperationException(yt.toString());
+            // TODO needs to be made much more efficient.
+            @NotNull StringBuilder sb = acquireStringBuilder();
+            if (yt.current() == YamlToken.TAG) {
+                bytes.readSkip(1);
+                yt.text(sb);
+                yt.next();
+                if (yt.current() != YamlToken.TEXT)
+                    throw new UnsupportedOperationException(yt.toString());
+                @Nullable byte[] uncompressed = Compression.uncompress(sb, yt, t -> {
+                    @NotNull StringBuilder sb2 = acquireStringBuilder();
+                    t.text(sb2);
+                    return Base64.getDecoder().decode(sb2.toString());
+                });
+                if (uncompressed != null) {
+                    yt.next();
+                    return uncompressed;
+
+                } else if (StringUtils.isEqual(sb, "!null")) {
+                    yt.next();
+                    return null;
+
+                } else {
+                    throw new IORuntimeException("Unsupported type=" + sb);
+                }
+            } else {
+                textTo(sb);
+                return sb.toString().getBytes(StandardCharsets.UTF_8);
+            }
         }
 
         @NotNull
@@ -2426,6 +2462,9 @@ public class YamlWire extends AbstractWire implements Wire {
             } else if (yt.current() == YamlToken.TEXT) {
                 tReader.accept(t, YamlWire.this.valueIn);
 
+            } else if (isNull()) {
+                return false;
+
             } else {
                 throw new UnsupportedOperationException(yt.toString());
             }
@@ -2470,6 +2509,8 @@ public class YamlWire extends AbstractWire implements Wire {
         public boolean hasNextSequenceItem() {
             switch (yt.current()) {
                 case TEXT:
+                case MAPPING_START:
+                case SEQUENCE_START:
                 case SEQUENCE_ENTRY:
                     return true;
             }
@@ -2612,7 +2653,8 @@ public class YamlWire extends AbstractWire implements Wire {
                         wireIn().endEvent();
                     } catch (UnsupportedOperationException uoe) {
                         throw new IORuntimeException("Unterminated { while reading marshallable " +
-                                object + ",code='" + yt.current() + "', bytes=" + Bytes.toString(bytes, 1024)
+                                object + ",code='" + yt.current() + "', bytes=" + Bytes.toString(bytes, 1024),
+                                uoe
                         );
                     }
                     return object;

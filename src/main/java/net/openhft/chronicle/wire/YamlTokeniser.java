@@ -415,7 +415,7 @@ public class YamlTokeniser {
 
         blockQuote = 0;
         readWords();
-        if (isFieldEnd()) {
+        if (last != YamlToken.TAG && isFieldEnd()) {
             lastKeyPosition = pos;
             return indent(YamlToken.MAPPING_START, YamlToken.MAPPING_KEY, YamlToken.TEXT, indent2);
         }

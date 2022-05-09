@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.lang.annotation.RetentionPolicy;
 import java.net.Socket;
@@ -59,6 +60,45 @@ public class YamlWireTest extends WireTestCommon {
     Bytes<?> bytes;
 
     @Test
+    public void binaryField() {
+        @NotNull Wire wire = createWire();
+        OneByteArray oba = new OneByteArray();
+        oba.buf = new byte[5];
+        wire.getValueOut().object(oba);
+        assertEquals("" +
+                        "!net.openhft.chronicle.wire.YamlWireTest$OneByteArray {\n" +
+                        "  buf: !!binary AAAAAAA=\n" +
+                        "}\n",
+                wire.toString());
+        OneByteArray oba2 = (OneByteArray) wire.getValueIn().object();
+        assertArrayEquals(oba.buf, oba2.buf);
+    }
+
+    @Ignore("TODO FIX")
+    @Test
+    public void writeObjectWithTreeMap() {
+        @NotNull YamlWire wire = createWire();
+        ObjectWithTreeMap value = new ObjectWithTreeMap();
+        value.map.put("hello", "world");
+        wire.write().object(value);
+
+        // System.out.println(wire);
+
+        ObjectWithTreeMap value2 = new ObjectWithTreeMap();
+        wire.read().object(value2, ObjectWithTreeMap.class);
+        assertEquals("{hello=world}", value2.map.toString());
+
+        wire.reset();
+        ObjectWithTreeMap value3 = new ObjectWithTreeMap();
+        wire.read().object(value3, Object.class);
+        assertEquals("{hello=world}", value3.map.toString());
+
+        wire.reset();
+        ObjectWithTreeMap value4 = wire.read().object(ObjectWithTreeMap.class);
+        assertEquals("{hello=world}", value4.map.toString());
+    }
+
+    @Test
     public void comment() {
         @NotNull Wire wire = createWire();
         wire.writeComment("\thi: omg");
@@ -77,28 +117,30 @@ public class YamlWireTest extends WireTestCommon {
         assertEquals(0, sb.length());
     }
 
-    @Ignore("TODO FIX")
+    @Ignore("TODO")
     @Test
-    public void writeObjectWithTreeMap() {
-        @NotNull YamlWire wire = createWire();
-        ObjectWithTreeMap value = new ObjectWithTreeMap();
-        value.map.put("hello", "world");
-        wire.write().object(value);
+    public void testWriteToBinaryAndTriesToConvertToText() {
 
-       // System.out.println(wire);
+        Bytes<?> b = Bytes.elasticByteBuffer();
+        Wire wire = WireType.BINARY.apply(b);
+        wire.usePadding(true);
 
-        ObjectWithTreeMap value2 = new ObjectWithTreeMap();
-        wire.read().object(value2, ObjectWithTreeMap.class);
-        assertEquals("{hello=world}", value2.map.toString());
+        @NotNull Map<String, String> data = Collections.singletonMap("key", "value");
 
-        wire.reset();
-        ObjectWithTreeMap value3 = new ObjectWithTreeMap();
-        wire.read().object(value3, Object.class);
-        assertEquals("{hello=world}", value3.map.toString());
+        @NotNull HashMap map = new HashMap();
+        map.put("some", data);
+        map.put("some-other", data);
 
-        wire.reset();
-        ObjectWithTreeMap value4 = wire.read().object(ObjectWithTreeMap.class);
-        assertEquals("{hello=world}", value4.map.toString());
+        try (DocumentContext dc = wire.writingDocument()) {
+            wire.write("map").object(map);
+        }
+
+        final String textYaml = Wires.fromSizePrefixedBlobs(b);
+        // System.out.println(textYaml);
+        @Nullable Object o = WireType.YAML.fromString(textYaml);
+        Assert.assertEquals("{map={some={key=value}, some-other={key=value}}}", o.toString());
+
+        b.releaseLast();
     }
 
     @Ignore("TODO")
@@ -151,30 +193,20 @@ public class YamlWireTest extends WireTestCommon {
         assertEquals(488, w.read("perms").int64());
     }
 
-    @Ignore("TODO")
     @Test
-    public void testWriteToBinaryAndTriesToConvertToText() {
+    public void testFailingBoolean() {
+        @NotNull Wire wire = createWire();
 
-        Bytes<?> b = Bytes.elasticByteBuffer();
-        Wire wire = WireType.BINARY.apply(b);
-        wire.usePadding(true);
+        wire.write(() -> "A").text("");
+        wire.write(() -> "B").text("other");
+        assertEquals("A: \"\"\n" +
+                "B: other\n", wire.toString());
+        @NotNull String expected = "{A=, B=other}";
+        expectWithSnakeYaml(expected, wire);
 
-        @NotNull Map<String, String> data = Collections.singletonMap("key", "value");
-
-        @NotNull HashMap map = new HashMap();
-        map.put("some", data);
-        map.put("some-other", data);
-
-        try (DocumentContext dc = wire.writingDocument()) {
-            wire.write("map").object(map);
-        }
-
-        final String textYaml = Wires.fromSizePrefixedBlobs(b);
-       // System.out.println(textYaml);
-        @Nullable Object o = WireType.YAML.fromString(textYaml);
-        Assert.assertEquals("{map={some={key=value}, some-other={key=value}}}", o.toString());
-
-        b.releaseLast();
+        // TODO fix.
+        // assertEquals(null, wire.read(() -> "A").object(Boolean.class));
+        assertEquals(false, wire.read(() -> "B").object(Boolean.class));
     }
 
     @Test
@@ -225,19 +257,30 @@ public class YamlWireTest extends WireTestCommon {
     }
 
     @Test
-    public void testFailingBoolean() {
+    public void type() {
         @NotNull Wire wire = createWire();
+        wire.write().typePrefix("MyType").text("");
+        wire.write(BWKey.field1).typePrefix("AlsoMyType").text("");
+        @NotNull String name1 = "com.sun.java.swing.plaf.nimbus.InternalFrameInternalFrameTitlePaneInternalFrameTitlePaneMaximizeButtonWindowNotFocusedState";
+        wire.write(() -> "Test").typePrefix(name1).text("");
+        wire.writeComment("");
+        // TODO fix how types are serialized.
+        // expectWithSnakeYaml(wire, "{=1, field1=2, Test=3}");
+        assertEquals("\"\": !MyType \"\"\n" +
+                "field1: !AlsoMyType \"\"\n" +
+                "Test: !" + name1 + " \"\"\n" +
+                "# \n", wire.toString());
 
-        wire.write(() -> "A").text("");
-        wire.write(() -> "B").text("other");
-        assertEquals("A: \"\"\n" +
-                "B: other\n", wire.toString());
-        @NotNull String expected = "{A=, B=other}";
-        expectWithSnakeYaml(expected, wire);
+        // ok as blank matches anything
+        Stream.of("MyType", "AlsoMyType", name1).forEach(e -> {
+            wire.read()
+                    .typePrefix(e, Assert::assertEquals)
+                    .text();
+        });
 
-        // TODO fix.
-       // assertEquals(null, wire.read(() -> "A").object(Boolean.class));
-        assertEquals(false, wire.read(() -> "B").object(Boolean.class));
+        assertEquals(0, bytes.readRemaining(), 1);
+        // check it's safe to read too much.
+        wire.read();
     }
 
     @Test
@@ -597,30 +640,27 @@ public class YamlWireTest extends WireTestCommon {
     }
 
     @Test
-    public void type() {
+    public void testQuoting() {
         @NotNull Wire wire = createWire();
-        wire.write().typePrefix("MyType").text("");
-        wire.write(BWKey.field1).typePrefix("AlsoMyType").text("");
-        @NotNull String name1 = "com.sun.java.swing.plaf.nimbus.InternalFrameInternalFrameTitlePaneInternalFrameTitlePaneMaximizeButtonWindowNotFocusedState";
-        wire.write(() -> "Test").typePrefix(name1).text("");
-        wire.writeComment("");
-        // TODO fix how types are serialized.
-       // expectWithSnakeYaml(wire, "{=1, field1=2, Test=3}");
-        assertEquals("\"\": !MyType \"\"\n" +
-                "field1: !AlsoMyType \"\"\n" +
-                "Test: !" + name1 + " \"\"\n" +
-                "# \n", wire.toString());
-
-        // ok as blank matches anything
-        Stream.of("MyType", "AlsoMyType", name1).forEach(e -> {
-            wire.read()
-                    .typePrefix(e, Assert::assertEquals)
-                    .text();
-        });
-
-        assertEquals(0, bytes.readRemaining(), 1);
-        // check it's safe to read too much.
-        wire.read();
+        wire.bytes().append(
+                "nonesingle: \\\n" +
+                        "nonedouble: \\\\\n" +
+                        "singleself: ''''\n" +
+                        "singleselfself: ''''''\n" +
+                        "singlesingle: '\\'\n" +
+                        "singledouble: '\\\\'\n" +
+                        "doubleself: \"\\\"\"\n" +
+                        "doublesingle: \"\\\\\"\n" +
+                        "doubledouble: \"\\\\\\\\\"\n");
+        assertEquals("\\", wire.read("nonesingle").readString());
+        assertEquals("\\\\", wire.read("nonedouble").readString());
+        assertEquals("'", wire.read("singleself").readString());
+        assertEquals("''", wire.read("singleselfself").readString());
+        assertEquals("\\", wire.read("singlesingle").readString());
+        assertEquals("\\\\", wire.read("singledouble").readString());
+        assertEquals("\"", wire.read("doubleself").readString());
+        assertEquals("\\", wire.read("doublesingle").readString());
+        assertEquals("\\\\", wire.read("doubledouble").readString());
     }
 
     @Test
@@ -770,37 +810,32 @@ public class YamlWireTest extends WireTestCommon {
     }
 
     @Test
-    public void testQuoting() {
-        @NotNull Wire wire = createWire();
-        wire.bytes().append(
-                "nonesingle: \\\n" +
-                "nonedouble: \\\\\n" +
-                "singleself: ''''\n" +
-                "singleselfself: ''''''\n" +
-                "singlesingle: '\\'\n" +
-                "singledouble: '\\\\'\n" +
-                "doubleself: \"\\\"\"\n" +
-                "doublesingle: \"\\\\\"\n" +
-                "doubledouble: \"\\\\\\\\\"\n");
-        assertEquals("\\", wire.read("nonesingle").readString());
-        assertEquals("\\\\", wire.read("nonedouble").readString());
-        assertEquals("'", wire.read("singleself").readString());
-        assertEquals("''", wire.read("singleselfself").readString());
-        assertEquals("\\", wire.read("singlesingle").readString());
-        assertEquals("\\\\", wire.read("singledouble").readString());
-        assertEquals("\"", wire.read("doubleself").readString());
-        assertEquals("\\", wire.read("doublesingle").readString());
-        assertEquals("\\\\", wire.read("doubledouble").readString());
-    }
-
-    @Test
     public void testBinary() {
         @NotNull Wire wire = createWire();
         wire.bytes().append("b: !byte[] !!binary AAAAAAA=\n" +
                 "c: !!binary CCCCCCCC\n");
         byte[] b = (byte[]) wire.read("b").object();
-        assertTrue(Arrays.toString(b), Arrays.equals(new byte[] {0, 0, 0, 0, 0}, b));
-        assertEquals(BytesStore.wrap(new byte[] {8, ' ', -126, 8, ' ', -126}), wire.read("c").object());
+        assertTrue(Arrays.toString(b), Arrays.equals(new byte[]{0, 0, 0, 0, 0}, b));
+        assertEquals(BytesStore.wrap(new byte[]{8, ' ', -126, 8, ' ', -126}), wire.read("c").object());
+    }
+
+    @Test
+    public void testBytes() {
+        @NotNull Wire wire = createWire();
+        @NotNull byte[] allBytes = new byte[256];
+        for (int i = 0; i < 256; i++)
+            allBytes[i] = (byte) i;
+        wire.write().bytes(NoBytesStore.NO_BYTES)
+                .write().bytes(Bytes.wrapForRead("Hello".getBytes(ISO_8859_1)))
+                .write().bytes(Bytes.wrapForRead("quotable, text".getBytes(ISO_8859_1)))
+                .write().bytes(allBytes);
+        // System.out.println(bytes.toString());
+        @NotNull Bytes<?> allBytes2 = allocateElasticOnHeap();
+        wire.read().bytes(b -> assertEquals(0, b.readRemaining()))
+                .read().bytes(b -> assertEquals("Hello", b.toString()))
+                .read().bytes(b -> assertEquals("quotable, text", b.toString()))
+                .read().bytes(allBytes2);
+        assertEquals(Bytes.wrapForRead(allBytes), allBytes2);
     }
 
     @Ignore("TODO FIX")
@@ -859,23 +894,36 @@ public class YamlWireTest extends WireTestCommon {
         }*/
     }
 
+    @SuppressWarnings("deprecation")
     @Test
-    public void testBytes() {
-        @NotNull Wire wire = createWire();
-        @NotNull byte[] allBytes = new byte[256];
-        for (int i = 0; i < 256; i++)
-            allBytes[i] = (byte) i;
-        wire.write().bytes(NoBytesStore.NO_BYTES)
-                .write().bytes(Bytes.wrapForRead("Hello".getBytes(ISO_8859_1)))
-                .write().bytes(Bytes.wrapForRead("quotable, text".getBytes(ISO_8859_1)))
-                .write().bytes(allBytes);
-       // System.out.println(bytes.toString());
-        @NotNull Bytes<?> allBytes2 = allocateElasticOnHeap();
-        wire.read().bytes(b -> assertEquals(0, b.readRemaining()))
-                .read().bytes(b -> assertEquals("Hello", b.toString()))
-                .read().bytes(b -> assertEquals("quotable, text", b.toString()))
-                .read().bytes(allBytes2);
-        assertEquals(Bytes.wrapForRead(allBytes), allBytes2);
+    public void testMapReadAndWriteStrings() {
+        @NotNull final Bytes<?> bytes = allocateElasticOnHeap();
+        @NotNull final Wire wire = new YamlWire(bytes);
+        wire.usePadding(true);
+
+        @NotNull final Map<String, String> expected = new LinkedHashMap<>();
+
+        expected.put("hello", "world");
+        expected.put("hello1", "world1");
+        expected.put("hello2", "world2");
+
+        wire.writeDocument(false, o -> {
+            o.writeEventName(() -> "example")
+                    .map(expected);
+        });
+        // bytes.readPosition(4);
+        // expectWithSnakeYaml("{example={hello=world, hello1=world1, hello2=world2}}", wire);
+        // bytes.readPosition(0);
+        assertEquals("--- !!data\n" +
+                        "example: {\n" +
+                        "  hello: world,\n" +
+                        "  hello1: world1,\n" +
+                        "  hello2: world2\n" +
+                        "}\n",
+                Wires.fromSizePrefixedBlobs(bytes));
+        @NotNull final Map<String, String> actual = new LinkedHashMap<>();
+        wire.readDocument(null, c -> c.read(() -> "example").marshallableAsMap(String.class, String.class, actual));
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -1024,36 +1072,91 @@ public class YamlWireTest extends WireTestCommon {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Test
-    public void testMapReadAndWriteStrings() {
-        @NotNull final Bytes<?> bytes = allocateElasticOnHeap();
-        @NotNull final Wire wire = new YamlWire(bytes);
-        wire.usePadding(true);
+    public void testYNestedDecode() {
+        @NotNull String s = "cluster: {\n" +
+                "  host1: {\n" +
+                "     hostId: 1,\n" +
+                // "     name: one,\n" +
+                "  },\n" +
+                "  host2: {\n" +
+                "     hostId: 2,\n" +
+                "  },\n" +
+                "#  host3: {\n" +
+                "#     hostId: 3,\n" +
+                "#  },\n" +
+                "  host4: {\n" +
+                "     hostId: 4,\n" +
+                "  },\n" +
+                "}" +
+                "cluster2: {\n" +
+                "    host21: {\n" +
+                "       hostId: 21\n" +
+                "    }\n" +
+                "}\n";
+        assertEquals("DIRECTIVES_END \n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT cluster\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT host1\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT hostId\n" +
+                "TEXT 1\n" +
+                "MAPPING_END \n" +
+                "MAPPING_KEY \n" +
+                "TEXT host2\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT hostId\n" +
+                "TEXT 2\n" +
+                "MAPPING_END \n" +
+                "COMMENT host3: {\n" +
+                "COMMENT hostId: 3,\n" +
+                "COMMENT },\n" +
+                "MAPPING_KEY \n" +
+                "TEXT host4\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT hostId\n" +
+                "TEXT 4\n" +
+                "MAPPING_END \n" +
+                "MAPPING_END \n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT cluster2\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT host21\n" +
+                "MAPPING_START \n" +
+                "MAPPING_KEY \n" +
+                "TEXT hostId\n" +
+                "TEXT 21\n" +
+                "MAPPING_END \n" +
+                "MAPPING_END \n" +
+                "MAPPING_END \n" +
+                "MAPPING_END \n" +
+                "DOCUMENT_END \n", doTest("=" + s));
 
-        @NotNull final Map<String, String> expected = new LinkedHashMap<>();
-
-        expected.put("hello", "world");
-        expected.put("hello1", "world1");
-        expected.put("hello2", "world2");
-
-        wire.writeDocument(false, o -> {
-            o.writeEventName(() -> "example")
-                    .map(expected);
-        });
-       // bytes.readPosition(4);
-       // expectWithSnakeYaml("{example={hello=world, hello1=world1, hello2=world2}}", wire);
-       // bytes.readPosition(0);
-        assertEquals("--- !!data\n" +
-                        "example: {\n" +
-                        "  hello: world,\n" +
-                        "  hello1: world1,\n" +
-                        "  hello2: world2\n" +
-                        "}\n",
-                Wires.fromSizePrefixedBlobs(bytes));
-        @NotNull final Map<String, String> actual = new LinkedHashMap<>();
-        wire.readDocument(null, c -> c.read(() -> "example").marshallableAsMap(String.class, String.class, actual));
-        assertEquals(expected, actual);
+        ObjIntConsumer<String> results = EasyMock.createMock(ObjIntConsumer.class);
+        results.accept("host1", 1);
+        results.accept("host2", 2);
+        results.accept("host4", 4);
+        replay(results);
+        @NotNull YamlWire wire = YamlWire.from(s);
+        wire.read(() -> "cluster").marshallable(v -> {
+                    @NotNull StringBuilder sb = new StringBuilder();
+                    while (wire.hasMore()) {
+                        wire.readEventName(sb)
+                                .marshallable(m ->
+                                        m.read(() -> "hostId")
+                                                .int32(sb.toString(), results));
+                    }
+                }
+        );
+        verify(results);
     }
 
     @Test
@@ -1379,90 +1482,13 @@ public class YamlWireTest extends WireTestCommon {
     }
 
     @Test
-    public void testYNestedDecode() {
-        @NotNull String s = "cluster: {\n" +
-                "  host1: {\n" +
-                "     hostId: 1,\n" +
-               // "     name: one,\n" +
-                "  },\n" +
-                "  host2: {\n" +
-                "     hostId: 2,\n" +
-                "  },\n" +
-                "#  host3: {\n" +
-                "#     hostId: 3,\n" +
-                "#  },\n" +
-                "  host4: {\n" +
-                "     hostId: 4,\n" +
-                "  },\n" +
-                "}" +
-                "cluster2: {\n" +
-                "    host21: {\n" +
-                "       hostId: 21\n" +
-                "    }\n" +
-                "}\n";
-        assertEquals("DIRECTIVES_END \n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT cluster\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT host1\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT hostId\n" +
-                "TEXT 1\n" +
-                "MAPPING_END \n" +
-                "MAPPING_KEY \n" +
-                "TEXT host2\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT hostId\n" +
-                "TEXT 2\n" +
-                "MAPPING_END \n" +
-                "COMMENT host3: {\n" +
-                "COMMENT hostId: 3,\n" +
-                "COMMENT },\n" +
-                "MAPPING_KEY \n" +
-                "TEXT host4\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT hostId\n" +
-                "TEXT 4\n" +
-                "MAPPING_END \n" +
-                "MAPPING_END \n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT cluster2\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT host21\n" +
-                "MAPPING_START \n" +
-                "MAPPING_KEY \n" +
-                "TEXT hostId\n" +
-                "TEXT 21\n" +
-                "MAPPING_END \n" +
-                "MAPPING_END \n" +
-                "MAPPING_END \n" +
-                "MAPPING_END \n" +
-                "DOCUMENT_END \n", doTest("=" + s));
-
-        ObjIntConsumer<String> results = EasyMock.createMock(ObjIntConsumer.class);
-        results.accept("host1", 1);
-        results.accept("host2", 2);
-        results.accept("host4", 4);
-        replay(results);
-        @NotNull YamlWire wire = YamlWire.from(s);
-        wire.read(() -> "cluster").marshallable(v -> {
-                    @NotNull StringBuilder sb = new StringBuilder();
-                    while (wire.hasMore()) {
-                        wire.readEventName(sb)
-                                .marshallable(m ->
-                                        m.read(() -> "hostId")
-                                                .int32(sb.toString(), results));
-                    }
-                }
-        );
-        verify(results);
+    @Ignore("TODO FIX")
+    public void writeUnserializable() throws IOException {
+        // System.out.println(TEXT.asString(Thread.currentThread()));
+        @NotNull Socket s = new Socket();
+        // System.out.println(TEXT.asString(s));
+        SocketChannel sc = SocketChannel.open();
+        // System.out.println(TEXT.asString(sc));
     }
 
     @Test
@@ -1600,14 +1626,8 @@ public class YamlWireTest extends WireTestCommon {
         wire.bytes().releaseLast();
     }
 
-    @Test
-    @Ignore("TODO FIX")
-    public void writeUnserializable() throws IOException {
-       // System.out.println(TEXT.asString(Thread.currentThread()));
-        @NotNull Socket s = new Socket();
-       // System.out.println(TEXT.asString(s));
-        SocketChannel sc = SocketChannel.open();
-       // System.out.println(TEXT.asString(sc));
+    static class OneByteArray implements Serializable {
+        byte[] buf;
     }
 
     @Ignore("TODO FIX")

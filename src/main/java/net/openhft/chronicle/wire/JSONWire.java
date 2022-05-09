@@ -712,7 +712,7 @@ public class JSONWire extends TextWire {
                 sb.setLength(0);
                 readTypeDefinition(sb);
                 final Class<?> overrideClass = classLookup().forName(sb.subSequence(1, sb.length()));
-                if (clazz != null && !clazz.isAssignableFrom(overrideClass))
+                if (clazz != null && !overrideClass.isAssignableFrom(clazz))
                     throw new ClassCastException("Unable to cast " + overrideClass.getName() + " to " + clazz.getName());
                 if (using != null && !overrideClass.isInstance(using))
                     throw new ClassCastException("Unable to reuse a " + using.getClass().getName() + " as a " + overrideClass.getName());

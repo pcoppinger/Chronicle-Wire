@@ -63,9 +63,10 @@ public class WireMarshaller<T> {
         this(fields, isLeaf, defaultValueForType(tClass));
     }
 
-    private WireMarshaller(@NotNull FieldAccess[] fields, boolean isLeaf, @Nullable T defaultValue) {
+    private WireMarshaller(@NotNull FieldAccess[] fields, boolean isLeaf, T defaultValue) {
         this.fields = fields;
         this.isLeaf = isLeaf;
+        assert fields.length == 0 || defaultValue != null;
         this.defaultValue = defaultValue;
         for (FieldAccess field : fields) {
             fieldMap.put(field.key.name(), field);
@@ -170,7 +171,11 @@ public class WireMarshaller<T> {
                 throw new AssertionError(e);
             }
         }
-        return null;
+        try {
+            return OS.memory().allocateInstance(tClass);
+        } catch (InstantiationException e) {
+            return null;
+        }
     }
 
     private static int compare(CharSequence cs0, CharSequence cs1) {
@@ -288,7 +293,7 @@ public class WireMarshaller<T> {
         }
     }
 
-    public void readMarshallable(T t, @NotNull WireIn in, T defaults, boolean overwrite) {
+    public void readMarshallable(@NotNull T t, @NotNull WireIn in, @NotNull T defaults, boolean overwrite) {
         if (in.hintReadInputOrder())
             readMarshallableInputOrder(t, in, defaults, overwrite);
         else
@@ -306,8 +311,11 @@ public class WireMarshaller<T> {
         }
     }
 
-    public void readMarshallableInputOrder(T t, @NotNull WireIn in, T defaults, boolean overwrite) {
+    public void readMarshallableInputOrder(@NotNull T t, @NotNull WireIn in, @NotNull T defaults, boolean overwrite) {
         try {
+            if (fields.length == 0)
+                return;
+            Objects.requireNonNull(defaults);
             StringBuilder sb = SBP.acquireStringBuilder();
             for (int i = 0; i < fields.length; i++) {
                 boolean more = in.hasMore();
@@ -1825,6 +1833,8 @@ public class WireMarshaller<T> {
 
         @Override
         protected void copy(Object from, Object to) {
+            assert from != null;
+            assert to != null;
             unsafePutLong(to, offset, unsafeGetLong(from, offset));
         }
     }
@@ -1916,8 +1926,6 @@ public class WireMarshaller<T> {
             unsafePutDouble(to, offset, unsafeGetDouble(from, offset));
         }
     }
-
-
 
 
 }

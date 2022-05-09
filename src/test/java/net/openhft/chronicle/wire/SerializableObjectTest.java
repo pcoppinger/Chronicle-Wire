@@ -302,7 +302,7 @@ final class SerializableObjectTest extends WireTestCommon {
     }
 
     private static Stream<WireType> wires() {
-        return Stream.of(WireType.TEXT, WireType.JSON, WireType.BINARY);
+        return Stream.of(WireType.YAML_ONLY, WireType.TEXT, WireType.JSON, WireType.BINARY);
     }
 
     static void assertEqualEnough(Object a, Object b) {
@@ -314,7 +314,7 @@ final class SerializableObjectTest extends WireTestCommon {
         } else if (a instanceof Queue) {
             assertEquals(a.toString(), b.toString());
         } else {
-            assertEquals(a, b);
+            assertEquals(WireType.JSON_ONLY.asString(a), WireType.JSON_ONLY.asString(b));
         }
     }
 
@@ -337,11 +337,14 @@ final class SerializableObjectTest extends WireTestCommon {
                     else
                         assertEqualEnough(source, target);
                 }
-            } catch (IllegalArgumentException iae) {
+            } catch (Exception e) {
                 // allow JSON to reject types not supported.
-                if (wireTypeObject.wireType == WireType.JSON)
+                // TODO Remove this exception for JSON_ONLY
+                if (e instanceof IllegalArgumentException && wireTypeObject.wireType == WireType.JSON)
                     return;
-                throw iae;
+                bytes.readPosition(0);
+                System.err.println("Failed to parse\n" + bytes);
+                throw e;
             } finally {
                 bytes.releaseLast();
             }
