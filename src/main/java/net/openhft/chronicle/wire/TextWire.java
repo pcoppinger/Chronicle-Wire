@@ -3236,6 +3236,7 @@ public class TextWire extends AbstractWire implements Wire {
 
             long l = getALong();
             checkRewind();
+            consumePadding(1);
             return l;
         }
 

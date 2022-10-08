@@ -17,12 +17,14 @@
 package net.openhft.chronicle.wire;
 
 import net.openhft.chronicle.bytes.*;
+import net.openhft.chronicle.core.io.IORuntimeException;
 import net.openhft.chronicle.core.threads.ThreadLocalHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.BufferUnderflowException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -238,11 +240,14 @@ public class CSVWire extends TextWire {
             return ch > 0 && ch != ']';
         }
 
-        @NotNull
+        @Nullable
         @Override
-        public boolean marshallable(@NotNull ReadMarshallable object) {
-            if (isNull())
-                return false;
+        public Object marshallable(@NotNull Object object, @NotNull SerializationStrategy strategy)
+                throws BufferUnderflowException, IORuntimeException {
+            if (isNull()) {
+                consumePadding(1);
+                return null;
+            }
             pushState();
             final long len = readLengthMarshallable();
 
@@ -255,15 +260,15 @@ public class CSVWire extends TextWire {
 
                 bytes.readLimit(newLimit);
                 consumePadding();
-                object.readMarshallable(CSVWire.this);
+                strategy.readUsing(object, this);
             } finally {
                 bytes.readLimit(limit);
                 bytes.readPosition(newLimit);
                 popState();
             }
 
-            consumePadding();
-            return true;
+            consumePadding(1);
+            return object;
         }
     }
 }
